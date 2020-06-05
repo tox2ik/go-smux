@@ -83,6 +83,7 @@ func passInputAgent(keyPaths []string, pass []byte) (err error) {
 	}
 	sshAgent := agent.NewClient(sock)
 	var pk crypto.PrivateKey
+	var errata = ""
 	for _, keyPath := range keyPaths {
 		var errK error
 		var bytes []byte
@@ -92,8 +93,11 @@ func passInputAgent(keyPaths []string, pass []byte) (err error) {
 			}
 		}
 		if errK != nil {
-			return errK
+			errata += fmt.Sprintf("%s: %s\n", keyPath, errK)
 		}
+	}
+	if errata != "" {
+		return errors.New("\n" + errata)
 	}
 	return nil
 }
@@ -106,28 +110,28 @@ func readPass() (pass []byte, err error) {
 }
 
 // https://github.com/golang/go/blob/dev.boringcrypto.go1.13/src/crypto/tls/tls.go
-func parsePrivateKey(der []byte, pass []byte) (crypto.PrivateKey, error) {
+func parsePrivateKey(key []byte, pass []byte) (pk crypto.PrivateKey, err error) {
 
-	if key, err := ssh.ParseRawPrivateKeyWithPassphrase(der, pass); err == nil {
-		return key, nil
-	} else {
-		derB, _ := pem.Decode(der)
-		der := derB.Bytes
+	if pk, err = ssh.ParseRawPrivateKeyWithPassphrase(key, pass); err == nil {
+		return pk, nil
+	}
 
-		if key, err := x509.ParsePKCS1PrivateKey(der); err == nil {
-			return key, nil
-		}
-		if key, err := x509.ParsePKCS8PrivateKey(der); err == nil {
-			switch key := key.(type) {
-			case *rsa.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey:
-				return key, nil
-			default:
-				return nil, errors.New("unknown private key type in PKCS#8 wrapping")
-			}
-		}
-		if key, err := x509.ParseECPrivateKey(der); err == nil {
-			return key, nil
+	derB, _ := pem.Decode(key)
+	der := derB.Bytes
+	if pk, err = x509.ParsePKCS1PrivateKey(der); err == nil {
+		return pk, nil
+	}
+	if pk, err = x509.ParsePKCS8PrivateKey(der); err == nil {
+		switch pk.(type) {
+		case *rsa.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey:
+			return pk, nil
+		default:
+			return nil, errors.New("unknown private pk type in PKCS#8 wrapping")
 		}
 	}
-	return nil, errors.New("failed to parse private key")
+	if pk, err = x509.ParseECPrivateKey(der); err == nil {
+		return pk, nil
+	}
+
+	return nil, errors.New("invalid passphrase or bad key")
 }
