@@ -88,6 +88,9 @@ func passInputAgent(keyPaths []string, pass []byte) (err error) {
 		if bytes, errK = ioutil.ReadFile(keyPath); errK == nil {
 			if pk, errK = parsePrivateKey(bytes, pass); errK == nil {
 				errK = sshAgent.Add(agent.AddedKey{PrivateKey: pk})
+				if errK == nil {
+					_, _ = os.Stderr.WriteString(fmt.Sprintf("added %s\n", keyPath))
+				}
 			}
 		}
 		if errK != nil {
@@ -109,7 +112,7 @@ func readPass() (pass []byte, err error) {
 		sin := bufio.NewReader(os.Stdin)
 		pass, _, err = sin.ReadLine()
 	} else {
-		_, _ = os.Stderr.WriteString(fmt.Sprint("give me all your secrets: "))
+		_, _ = os.Stderr.WriteString(fmt.Sprint("passphrase: "))
 		if pass, err = terminal.ReadPassword(syscall.Stdin); err != nil {
 			return pass, err
 		}
