@@ -2,7 +2,7 @@ all: build pack install
 build:
 	go build
 pack:
-	upx -q --lzma smux > /dev/null
+	upx -q --lzma smux > /dev/null || true
 install:
 	install smux ~/bin/smux 
 
