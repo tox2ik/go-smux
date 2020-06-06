@@ -5,9 +5,17 @@ There are utilities that do this already, but they do not work with `ssh-add`.
 
 ## Example
 
-    smux "ssh-add $HOME/.ssh/id_ra $HOME/secret/key.rsa" 'sudo cryptsetup open /dev/encrypted my-secrets'
+Init ssh-agent and unlock an encrypted volume
+
+    $ smux "ssh-add $HOME/.ssh/id_ra $HOME/secret/key.rsa" 'sudo cryptsetup open /dev/encrypted my-secrets'
     passphrase: *****************
     added /home/user/secret/key.rsa
     added /home/user/.ssh/id_rsa
 
+Pipe input to several utilities
+
+    $ echo Works similar to moreutils pee | smux sha224sum sha1sum md5sum
+    c015d10f322ab6c5e221262acb598872  -
+    debeca6bf61ffa188cb359258c9ad99e69ab15cf  -
+    5fbedfb30d010478ff9e9bdbd75a835d7b17e2782f2f95b3b106ce89  -
 
