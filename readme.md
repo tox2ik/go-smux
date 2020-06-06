@@ -7,7 +7,7 @@ There are utilities that do this already, but they do not work with `ssh-add`.
 
 Init ssh-agent and unlock an encrypted volume
 
-    $ smux "ssh-add $HOME/.ssh/id_ra $HOME/secret/key.rsa" 'sudo cryptsetup open /dev/encrypted my-secrets'
+    $ smux "ssh-add $HOME/.ssh/id_rsa $HOME/secret/key.rsa" 'sudo cryptsetup open /dev/encrypted my-secrets'
     passphrase: *****************
     added /home/user/secret/key.rsa
     added /home/user/.ssh/id_rsa
