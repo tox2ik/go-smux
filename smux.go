@@ -6,18 +6,18 @@ References
 - https://stackoverflow.com/questions/2137357/getpasswd-functionality-in-go
 - https://stackoverflow.com/questions/10385551/get-exit-code-go
 
+- https://flaviocopes.com/go-shell-pipes/
+
 - keysAvailable(agent Socket, identities []string) - https://bitbucket.org/rw_grim/convey/src/default/ssh/agent.go
+
+- https://unix.stackexchange.com/questions/28503/how-can-i-send-stdout-to-multiple-commands
 
 */
 package main
 
 import (
+	"bufio"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -42,11 +42,9 @@ func main() {
 	var err error
 	var pass []byte
 
-	_, _ = os.Stderr.WriteString(fmt.Sprint("give me all your secrets: "))
 	if pass, err = readPass(); err != nil {
 		log.Fatalln(err)
 	}
-	fmt.Println()
 	for _, cmds := range os.Args[1:] {
 		cmd := strings.Split(cmds, " ")
 		comm, args := cmd[0], cmd[1:]
@@ -103,35 +101,29 @@ func passInputAgent(keyPaths []string, pass []byte) (err error) {
 }
 
 func readPass() (pass []byte, err error) {
-	if pass, err = terminal.ReadPassword(syscall.Stdin); err != nil {
-		return nil, err
+	var fi, _ = os.Stdin.Stat()
+
+	isChardev := fi.Mode() & os.ModeCharDevice != 0
+	isNamedPipe := fi.Mode() & os.ModeNamedPipe != 0
+	if  ! isChardev || isNamedPipe {
+		sin := bufio.NewReader(os.Stdin)
+		pass, _, err = sin.ReadLine()
+	} else {
+		_, _ = os.Stderr.WriteString(fmt.Sprint("give me all your secrets: "))
+		if pass, err = terminal.ReadPassword(syscall.Stdin); err != nil {
+			return pass, err
+		}
+		defer fmt.Println()
 	}
 	return pass, err
 }
 
-// https://github.com/golang/go/blob/dev.boringcrypto.go1.13/src/crypto/tls/tls.go
 func parsePrivateKey(key []byte, pass []byte) (pk crypto.PrivateKey, err error) {
-
 	if pk, err = ssh.ParseRawPrivateKeyWithPassphrase(key, pass); err == nil {
 		return pk, nil
 	}
-
-	derB, _ := pem.Decode(key)
-	der := derB.Bytes
-	if pk, err = x509.ParsePKCS1PrivateKey(der); err == nil {
+	if pk, err = ssh.ParseRawPrivateKey(key); err == nil {
 		return pk, nil
 	}
-	if pk, err = x509.ParsePKCS8PrivateKey(der); err == nil {
-		switch pk.(type) {
-		case *rsa.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey:
-			return pk, nil
-		default:
-			return nil, errors.New("unknown private pk type in PKCS#8 wrapping")
-		}
-	}
-	if pk, err = x509.ParseECPrivateKey(der); err == nil {
-		return pk, nil
-	}
-
 	return nil, errors.New("invalid passphrase or bad key")
 }
