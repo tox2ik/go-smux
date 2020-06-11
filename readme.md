@@ -19,3 +19,6 @@ Pipe input to several utilities
     debeca6bf61ffa188cb359258c9ad99e69ab15cf  -
     5fbedfb30d010478ff9e9bdbd75a835d7b17e2782f2f95b3b106ce89  -
 
+## Environment variables
+
+    SSH_ADD_LIFE  - life time of stored keys, in seconds
