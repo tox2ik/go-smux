@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -43,7 +44,13 @@ func main() {
 		cmd := strings.Split(commands, " ")
 		comm, args := cmd[0], cmd[1:]
 		if "ssh-add" == comm {
-			stdErr := sink.PassInputAgent(args, plainText, errWriter)
+
+			sock, err := net.Dial(`unix`, os.Getenv(`SSH_AUTH_SOCK`))
+			if err != nil {
+				appendErr(err)
+			}
+
+			var stdErr = sink.PassInputAgent(sock, args, plainText, errWriter)
 			appendErr(stdErr)
 
 		} else {

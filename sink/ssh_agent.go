@@ -1,6 +1,7 @@
 package sink
 
 import (
+	"bytes"
 	"crypto"
 	"errors"
 	"fmt"
@@ -15,31 +16,30 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
-func PassInputAgent(keyPaths []string, password io.Reader, stdErr io.StringWriter) (err error) {
-	var plainTextPassword []byte
-	_, err = password.Read(plainTextPassword)
+func PassInputAgent(sock net.Conn, keyPaths []string, password io.Reader, stdErr io.StringWriter) (err error) {
+	plainTextPassword := new(bytes.Buffer)
+	_, err = plainTextPassword.ReadFrom(password)
 	if err != nil {
 		return err
 	}
 
-	var sock net.Conn
-	var pk crypto.PrivateKey
-	sock, err = net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
-	if err != nil {
-		return err
-	}
+
 	sshAgent := agent.NewClient(sock)
 	failures := 0
 	for _, keyPath := range keyPaths {
 		data, err := ioutil.ReadFile(keyPath)
+		var pk crypto.PrivateKey
 		if nil == err {
-			pk, err = parsePrivateKey(data, plainTextPassword)
+			pk, err = parsePrivateKey(data, plainTextPassword.Bytes())
 		}
 		if nil == err {
 			lifeTime, _ := strconv.ParseInt(os.Getenv("SSH_ADD_LIFE"), 10, 32)
-			err = sshAgent.Add(agent.AddedKey{PrivateKey: pk, Comment:keyPath, LifetimeSecs: uint32(lifeTime) })
+			err = sshAgent.Add(agent.AddedKey{
+				PrivateKey:   pk,
+				Comment:      keyPath,
+				LifetimeSecs: uint32(lifeTime)})
 		}
-		if nil == err{
+		if nil == err {
 			_, err = stdErr.WriteString(fmt.Sprintf("Identity added: %s\n", keyPath))
 		}
 		if err != nil {
@@ -50,6 +50,7 @@ func PassInputAgent(keyPaths []string, password io.Reader, stdErr io.StringWrite
 			}
 		}
 	}
+	//err = sock.Close()
 
 	if failures > 0 {
 		return fmt.Errorf("failed to add %d keys", failures)
@@ -66,4 +67,3 @@ func parsePrivateKey(key []byte, pass []byte) (pk crypto.PrivateKey, err error) 
 	}
 	return nil, errors.New("invalid passphrase or bad key")
 }
-

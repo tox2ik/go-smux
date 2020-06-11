@@ -33,4 +33,4 @@ Pipe input to several utilities
 - keysAvailable(agent Socket, identities []string)  
   https://bitbucket.org/rw_grim/convey/src/default/ssh/agent.go
 - https://unix.stackexchange.com/questions/28503/how-can-i-send-stdout-to-multiple-commands
-
+- https://stackoverflow.com/questions/11886531/terminating-a-process-started-with-os-exec-in-golang
