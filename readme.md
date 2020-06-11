@@ -22,3 +22,15 @@ Pipe input to several utilities
 ## Environment variables
 
     SSH_ADD_LIFE  - life time of stored keys, in seconds
+
+
+## References
+
+- https://stackoverflow.com/questions/38094555/golang-read-os-stdin-input-but-dont-echo-it
+- https://stackoverflow.com/questions/2137357/getpasswd-functionality-in-go
+- https://stackoverflow.com/questions/10385551/get-exit-code-go
+- https://flaviocopes.com/go-shell-pipes/
+- keysAvailable(agent Socket, identities []string)  
+  https://bitbucket.org/rw_grim/convey/src/default/ssh/agent.go
+- https://unix.stackexchange.com/questions/28503/how-can-i-send-stdout-to-multiple-commands
+
