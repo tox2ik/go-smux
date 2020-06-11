@@ -27,6 +27,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -118,7 +119,8 @@ func passInputAgent(keyPaths []string, pass []byte) (err error) {
 			pk, err = parsePrivateKey(data, pass)
 		}
 		if nil == err {
-			err = sshAgent.Add(agent.AddedKey{PrivateKey: pk})
+			lifeTime, _ := strconv.ParseInt(os.Getenv("SSH_ADD_LIFE"), 10, 32)
+			err = sshAgent.Add(agent.AddedKey{PrivateKey: pk, Comment:keyPath, LifetimeSecs: uint32(lifeTime) })
 		}
 		if nil == err{
 			_, err = errWriter.WriteString(fmt.Sprintf("Identity added: %s\n", keyPath))
