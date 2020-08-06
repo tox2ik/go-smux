@@ -4,9 +4,7 @@ package io
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"sync"
 	"syscall"
@@ -18,6 +16,7 @@ type MultiWriter interface {
 	Read(p []byte) (n int, err error)
 	Write(p []byte) (n int, err error)
 	WriteString(s string) (n int, err error)
+	Flush() error
 	Bytes() []byte
 	String() string
 }
@@ -45,51 +44,50 @@ func ReadPass() (password *bytes.Buffer, err error) {
 }
 
 func NewMultiWriter() MultiWriter {
-	w := new(bytes.Buffer)
-	return mwrite{
-		mutex:  sync.Mutex{},
-		buffer: w,
-		writer: bufio.NewWriter(w),
-	}
+	bwr := make([]byte, 0)
+	buf := bytes.NewBuffer(bwr)
+	return mwrite{ mutex: sync.Mutex{}, buf: buf }
 }
-
 
 
 type mwrite struct {
 	mutex  sync.Mutex
-	writer io.StringWriter
-	buffer *bytes.Buffer
+	buf    *bytes.Buffer
 }
 
 func (mw mwrite) String() string {
-	return string(mw.buffer.Bytes())
+	return mw.buf.String()
 }
 
 func (mw mwrite) Read(p []byte) (n int, err error) {
-	if nil != mw.buffer {
-		p = mw.buffer.Bytes()
-		mw.buffer.Truncate(0)
-		return len(p), nil
-	}
-	return 0, errors.New("null buffer")
+	n = copy(p, mw.buf.Bytes())
+	return n, nil
 }
 
+
 func (mw mwrite) Write(p []byte) (n int, err error) {
-	return mw.buffer.Write(p)
+	mw.mutex.Lock()
+	n, err = mw.buf.Write(p)
+	mw.mutex.Unlock()
+	return n, err
+}
+
+func (mw mwrite) Flush() error {
+	return nil
 }
 
 func (mw mwrite) WriteString(s string) (n int, err error) {
 	mw.mutex.Lock()
-	n, err = mw.writer.WriteString(s)
+	n, err = mw.buf.Write([]byte(s))
 	mw.mutex.Unlock()
 	return n, err
 }
 
 func (mw mwrite) Close() error {
-	mw.buffer = nil
+	// todo
 	return nil
 }
 
 func (mw mwrite) Bytes() []byte {
-	return mw.buffer.Bytes()
+	return mw.buf.Bytes()
 }

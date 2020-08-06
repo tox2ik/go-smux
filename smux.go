@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -34,16 +35,28 @@ func appendErr (e error) {
 
 // 1. read standard input
 // 2. start program (pipe reader)
-// 3. feed input to program (pipe reader)
+// 3. feed input to program (pipe writer)
 func main() {
-	plainText, err := sio.ReadPass()
+	buf, err := sio.ReadPass()
 	if err != nil {
 		log.Fatalln(err)
 	}
+	ptb := buf.Bytes()
+	plainText := bytes.NewReader(ptb)
+
 	for _, commands := range os.Args[1:] {
 		cmd := strings.Split(commands, " ")
 		comm, args := cmd[0], cmd[1:]
-		if "ssh-add" == comm {
+
+		// _,_ = plainText.Read(ptb)
+		// _,_ = errWriter.WriteString(fmt.Sprintf("smux: running %s <<<'%s'\n", cmd, ptb))
+		_,_ = errWriter.WriteString(fmt.Sprintf("smux: running %s\n", cmd))
+
+		_,_ = plainText.Seek(0, 0)
+
+		switch comm {
+
+		case `ssh-add`:
 
 			sock, err := net.Dial(`unix`, os.Getenv(`SSH_AUTH_SOCK`))
 			if err != nil {
@@ -53,21 +66,20 @@ func main() {
 			var stdErr = sink.PassInputAgent(sock, args, plainText, errWriter)
 			appendErr(stdErr)
 
-		} else {
+
+		default:
+
 			binary := execCommand(comm, args)
 			stdErr := sink.PassInputGeneric(binary, plainText)
 			appendErr(stdErr)
 		}
-		_,_ = errWriter.WriteString(fmt.Sprintf("done with %s", cmd))
+		// _,_ = errWriter.WriteString(fmt.Sprintf("smux: done with %s\n", cmd))
 	}
 
-	defer os.Stderr.WriteString(string(errWriter.Bytes()))
 
-	// hm.
-	// _, ioErr = os.Stderr.WriteString(string(outWriter.Bytes()))
-	// if ioErr != nil {
-	// 	panic(ioErr)
-	// }
+	defer func() {
+		_,_ = os.Stderr.Write(errWriter.Bytes())
+	}()
 }
 
 

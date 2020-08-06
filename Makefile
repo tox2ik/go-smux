@@ -19,5 +19,10 @@ clean:
 	rm -f testdata/jwf.* 2>/dev/null || true
 	rm -f smux
 
+test_luks:
+	make build
+	rm testdata/crypto-fs.block
+	cd testdata; bash test.luks.sh
+
 test:
 	go test
